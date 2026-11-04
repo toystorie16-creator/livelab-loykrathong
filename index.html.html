@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveLab 11.11 ลอยกระทงออนไลน์ - Loy Krathong Family</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Prompt & Sarabun -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            DEFAULT: '#D4AF37',
+                            light: '#F3E5AB',
+                            dark: '#AA7C11'
+                        },
+                        livelab: {
+                            red: '#FF2A5F',
+                            purple: '#8A2BE2',
+                            gold: '#FFD700'
+                        },
+                        night: {
+                            100: '#1a1c2e',
+                            200: '#0f1123',
+                            300: '#070913'
+                        }
+                    },
+                    fontFamily: {
+                        prompt: ['Prompt', 'sans-serif'],
+                        sarabun: ['Sarabun', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            overflow-x: hidden;
+            background-color: #070913;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f1123;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d4af37;
+            border-radius: 4px;
+        }
+
+        /* Glowing Effects */
+        .glow-gold {
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.6), 0 0 20px rgba(212, 175, 55, 0.3);
+        }
+        .box-glow {
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.15);
+        }
+        .candle-glow {
+            animation: flicker 1.5s infinite alternate;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; filter: drop-shadow(0 0 8px #ffaa00); }
+            50% { opacity: 0.7; filter: drop-shadow(0 0 4px #ff5500); }
+        }
+
+        /* Float animation */
+        @keyframes floatUpDown {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: floatUpDown 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="text-gray-100 flex flex-col min-h-screen relative selection:bg-gold selection:text-black">
+
+    <!-- Canvas Background for Night River Sky -->
+    <canvas id="riverCanvas" class="fixed top-0 left-0 w-full h-full z-0 pointer-events-auto"></canvas>
+
+    <!-- Header Overlay -->
+    <header class="relative z-10 w-full px-4 py-4 md:px-8 flex justify-between items-center bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+        <div class="flex items-center space-x-3">
+            <!-- LiveLab Logo Badge -->
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-livelab-red via-livelab-purple to-gold p-0.5 shadow-lg shadow-livelab-red/30">
+                <div class="w-full h-full bg-night-200 rounded-[14px] flex flex-col items-center justify-center font-bold tracking-tighter">
+                    <span class="text-xs text-white leading-none">LIVE</span>
+                    <span class="text-[10px] text-gold leading-none">LAB</span>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="px-2 py-0.5 bg-livelab-red/20 border border-livelab-red/50 text-pink-300 text-[10px] font-semibold rounded-full">LiveLab Family</span>
+                    <span class="text-xs text-gold-light">11.11 Festival</span>
+                </div>
+                <h1 class="text-xl md:text-2xl font-bold tracking-wide bg-gradient-to-r from-gold-light via-gold to-yellow-200 bg-clip-text text-transparent glow-gold">
+                    LiveLab ลอยกระทงออนไลน์
+                </h1>
+                <p class="text-xs text-gray-300 font-sarabun hidden sm:block">สืบสานประเพณีไทย ขอพรวันเพ็ญร่วมกันกับทีมงาน LiveLab</p>
+            </div>
+        </div>
+
+        <!-- Action Controls (Music & Sound) -->
+        <div class="flex items-center space-x-3">
+            <button id="musicBtn" onclick="toggleMusic()" class="flex items-center space-x-2 bg-night-100/80 hover:bg-night-100 border border-gold/30 px-3 py-1.5 rounded-full text-xs md:text-sm text-gold transition-all duration-300 shadow-md">
+                <i id="musicIcon" class="fa-solid fa-music text-gold"></i>
+                <span id="musicText" class="hidden sm:inline">เปิดเพลงบรรยากาศ</span>
+            </button>
+            <button onclick="toggleWallModal()" class="bg-gradient-to-r from-gold-dark to-gold hover:from-gold hover:to-yellow-400 text-black font-semibold px-4 py-1.5 rounded-full text-xs md:text-sm transition-all duration-300 shadow-lg flex items-center space-x-1.5">
+                <i class="fa-solid fa-list-ul"></i>
+                <span>กระทงชาว LiveLab (<span id="krathongCount">0</span>)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="relative z-10 flex-grow flex flex-col justify-end items-center px-4 pb-6 md:pb-10 pointer-events-none">
+        
+        <!-- Interactive Prompt Floating Banner -->
+        <div class="mb-4 md:mb-6 text-center pointer-events-auto">
+            <div class="bg-night-200/80 backdrop-blur-md border border-gold/30 rounded-2xl p-4 md:p-6 shadow-2xl max-w-lg mx-auto">
+                <div class="text-xs uppercase tracking-widest text-gold mb-1">WELCOME LIVELAB TEAM</div>
+                <h2 class="text-lg md:text-xl font-bold text-white mb-2">ร่วมลอยกระทง & ส่งพรคำอธิษฐาน 11.11</h2>
+                <p class="text-xs md:text-sm text-gold-light/90 mb-4 font-sarabun">แตะกระทงในแม่น้ำเพื่ออ่านพรของเพื่อนๆ หรือสร้างกระทงของคุณลงแม่น้ำ LiveLab</p>
+                <button onclick="openFormModal()" class="w-full sm:w-auto bg-gradient-to-r from-livelab-red via-gold to-amber-500 hover:brightness-110 text-slate-950 font-bold text-base md:text-lg px-8 py-3 rounded-xl shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 border border-yellow-200/50 flex items-center justify-center space-x-2 mx-auto">
+                    <span class="text-xl">🪷</span>
+                    <span>เริ่มสร้างและลอยกระทง LiveLab</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer Tagline -->
+    <footer class="relative z-10 py-3 text-center text-xs text-gray-400 bg-black/60 backdrop-blur-sm border-t border-white/5 font-sarabun">
+        LiveLab Family 11.11 Loy Krathong Online Event © 2026 LiveLab Company Limited.
+    </footer>
+
+    <!-- Modal: Form to Add Krathong -->
+    <div id="formModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-gradient-to-b from-night-100 to-night-200 border border-gold/40 rounded-2xl w-full max-w-2xl p-5 md:p-7 shadow-2xl relative overflow-hidden my-auto max-h-[92vh] overflow-y-auto">
+            
+            <!-- Close Button -->
+            <button onclick="closeFormModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors z-20">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="text-center mb-5">
+                <span class="px-3 py-1 bg-gold/10 border border-gold/30 rounded-full text-xs text-gold font-semibold uppercase tracking-wider">LiveLab Krathong Creation</span>
+                <h2 class="text-2xl md:text-3xl font-bold text-gold glow-gold mt-1">ออกแบบกระทง LiveLab</h2>
+                <p class="text-xs md:text-sm text-gray-300 font-sarabun">เลือกแบบกระทงและพิมพ์คำขอพรของคุณเพื่อลอยลงแม่น้ำ</p>
+            </div>
+
+            <form id="krathongForm" onsubmit="handleFormSubmit(event)" class="space-y-4 font-sarabun">
+                <!-- User Info Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gold-light mb-1.5">ชื่อ - นามสกุล / ชื่อเล่น <span class="text-red-400">*</span></label>
+                        <input type="text" id="empName" required placeholder="เช่น บอย (MC LiveLab)" class="w-full bg-night-300/80 border border-gold/30 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gold-light mb-1.5">แผนก / ตำแหน่ง (LiveLab) <span class="text-red-400">*</span></label>
+                        <select id="empDept" required onchange="handleDeptChange(this)" class="w-full bg-night-300/80 border border-gold/30 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all">
+                            <option value="" disabled selected>-- เลือกแผนก/ตำแหน่ง --</option>
+                            <option value="Director">1. Director</option>
+                            <option value="MC">2. MC</option>
+                            <option value="Support live">3. Support live</option>
+                            <option value="Operations Assistant">4. Operations Assistant</option>
+                            <option value="Content & Video Editor">5. Content & Video Editor</option>
+                            <option value="Graphic Designer">6. Graphic Designer</option>
+                            <option value="KOL influencer">7. KOL influencer</option>
+                            <option value="BD & CM">8. BD & CM</option>
+                            <option value="Shop Management">9. Shop Management</option>
+                            <option value="Human Resource">10. Human Resource</option>
+                            <option value="Other">11. อื่นๆ (รบกวนระบุ)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Custom Dept Input (Hidden by default) -->
+                <div id="customDeptWrapper" class="hidden">
+                    <label class="block text-xs font-medium text-gold-light mb-1.5">ระบุตำแหน่ง/แผนกของคุณ <span class="text-red-400">*</span></label>
+                    <input type="text" id="customDeptInput" placeholder="กรอกชื่อตำแหน่งหรือแผนกของคุณ..." class="w-full bg-night-300/80 border border-gold/40 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold transition-all">
+                </div>
+
+                <!-- Visual Krathong Selection Grid with Cards -->
+                <div>
+                    <label class="block text-xs font-medium text-gold-light mb-2">เลือกรูปแบบกระทง <span class="text-red-400">*</span></label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <!-- Type 1 -->
+                        <label class="cursor-pointer group relative">
+                            <input type="radio" name="krathongType" value="classic" checked onchange="updateKrathongPreview()" class="peer hidden">
+                            <div class="bg-night-300/80 border border-gray-700 peer-checked:border-gold peer-checked:bg-gold/15 peer-checked:shadow-[0_0_20px_rgba(212,175,55,0.3)] rounded-xl p-3 text-center transition-all group-hover:border-gold/50 flex flex-col items-center">
+                                <!-- Graphic Preview Badge -->
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-b from-emerald-800 to-green-950 flex items-center justify-center border border-emerald-500/40 shadow-inner mb-2 relative overflow-hidden group-hover:scale-105 transition-transform">
+                                    <span class="text-3xl relative z-10">🍃</span>
+                                    <span class="absolute text-[10px] bottom-1 text-emerald-300 font-bold">ใบตอง</span>
+                                </div>
+                                <div class="text-xs font-bold text-gray-200 peer-checked:text-gold">ใบตองคลาสสิก</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">พับจีบประณีต สายไทยเดิม</div>
+                            </div>
+                        </label>
+                        <!-- Type 2 -->
+                        <label class="cursor-pointer group relative">
+                            <input type="radio" name="krathongType" value="flower" onchange="updateKrathongPreview()" class="peer hidden">
+                            <div class="bg-night-300/80 border border-gray-700 peer-checked:border-gold peer-checked:bg-gold/15 peer-checked:shadow-[0_0_20px_rgba(212,175,55,0.3)] rounded-xl p-3 text-center transition-all group-hover:border-gold/50 flex flex-col items-center">
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-b from-pink-800 to-rose-950 flex items-center justify-center border border-pink-500/40 shadow-inner mb-2 relative overflow-hidden group-hover:scale-105 transition-transform">
+                                    <span class="text-3xl relative z-10">🌸</span>
+                                    <span class="absolute text-[10px] bottom-1 text-pink-300 font-bold">ดอกไม้</span>
+                                </div>
+                                <div class="text-xs font-bold text-gray-200 peer-checked:text-gold">ดอกไม้สดวิจิตร</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">กล้วยไม้ & ดอกบัวหวานงาม</div>
+                            </div>
+                        </label>
+                        <!-- Type 3 -->
+                        <label class="cursor-pointer group relative">
+                            <input type="radio" name="krathongType" value="eco" onchange="updateKrathongPreview()" class="peer hidden">
+                            <div class="bg-night-300/80 border border-gray-700 peer-checked:border-gold peer-checked:bg-gold/15 peer-checked:shadow-[0_0_20px_rgba(212,175,55,0.3)] rounded-xl p-3 text-center transition-all group-hover:border-gold/50 flex flex-col items-center">
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-b from-amber-800 to-orange-950 flex items-center justify-center border border-amber-500/40 shadow-inner mb-2 relative overflow-hidden group-hover:scale-105 transition-transform">
+                                    <span class="text-3xl relative z-10">🍞</span>
+                                    <span class="absolute text-[10px] bottom-1 text-amber-300 font-bold">ขนมปัง</span>
+                                </div>
+                                <div class="text-xs font-bold text-gray-200 peer-checked:text-gold">ขนมปังรักษ์โลก</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">เป็นอาหารให้ปลา ย่อยสลายง่าย</div>
+                            </div>
+                        </label>
+                        <!-- Type 4 -->
+                        <label class="cursor-pointer group relative">
+                            <input type="radio" name="krathongType" value="gold" onchange="updateKrathongPreview()" class="peer hidden">
+                            <div class="bg-night-300/80 border border-gray-700 peer-checked:border-gold peer-checked:bg-gold/15 peer-checked:shadow-[0_0_20px_rgba(212,175,55,0.3)] rounded-xl p-3 text-center transition-all group-hover:border-gold/50 flex flex-col items-center">
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-b from-yellow-700 to-amber-950 flex items-center justify-center border border-yellow-400/50 shadow-inner mb-2 relative overflow-hidden group-hover:scale-105 transition-transform">
+                                    <span class="text-3xl relative z-10">✨</span>
+                                    <span class="absolute text-[10px] bottom-1 text-yellow-300 font-bold">ทองคำ</span>
+                                </div>
+                                <div class="text-xs font-bold text-gray-200 peer-checked:text-gold"> LiveLab ทองคำ</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">เรืองรอง มั่งคั่ง ปังทะลุจอ</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Detailed Visual Preview Card -->
+                <div class="bg-night-300/90 border border-gold/30 rounded-xl p-4 flex items-center space-x-4">
+                    <div id="previewBadge" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-700 to-green-900 border-2 border-gold/60 flex flex-col items-center justify-center shadow-lg relative shrink-0">
+                        <span id="previewEmoji" class="text-4xl animate-bounce">🍃</span>
+                        <div class="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_10px_#ff0] absolute top-2 right-2 animate-ping"></div>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-bold text-gold uppercase tracking-wider">Live Preview</span>
+                            <span id="previewTitle" class="text-sm font-bold text-white">กระทงใบตองคลาสสิก</span>
+                        </div>
+                        <p id="previewDesc" class="text-xs text-gray-300 mt-1 font-sarabun">กระทงใบตองตานีพับประณีต ตกแต่งด้วยดอกดาวเรืองสดใส พร้อมธูปเทียนทองส่องสว่างเรืองรอง</p>
+                    </div>
+                </div>
+
+                <!-- Wish Area & Randomizer -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="text-xs font-medium text-gold-light">คำอธิษฐาน / พรวันลอยกระทง <span class="text-red-400">*</span></label>
+                        <button type="button" onclick="generateRandomWish()" class="text-xs text-amber-300 hover:text-amber-200 underline flex items-center space-x-1">
+                            <i class="fa-solid fa-dice"></i>
+                            <span>สุ่มคำอธิษฐานคนทำงาน LiveLab</span>
+                        </button>
+                    </div>
+                    <textarea id="empWish" required rows="3" placeholder="พิมพ์คำอธิษฐานขอพรของคุณถึงเพื่อนๆ LiveLab..." class="w-full bg-night-300/80 border border-gold/30 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all"></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-gradient-to-r from-livelab-red via-gold to-yellow-400 hover:brightness-110 text-night-300 font-bold py-3 px-6 rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>ปล่อยกระทงสู่แม่น้ำ LiveLab</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: View Single Wish Details -->
+    <div id="wishModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-gradient-to-b from-night-100 to-night-200 border border-gold/50 rounded-2xl w-full max-w-md p-6 shadow-2xl relative text-center">
+            <button onclick="closeWishModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-full bg-white/5">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div id="modalKrathongIcon" class="text-6xl mb-3 animate-float">🍃</div>
+            <div id="modalDept" class="inline-block px-3 py-1 bg-gold/20 text-gold-light rounded-full text-xs font-semibold mb-2">IT Department</div>
+            <h3 id="modalName" class="text-xl font-bold text-white mb-4">ชื่อพนักงาน</h3>
+            
+            <div class="bg-night-300/80 border border-white/10 rounded-xl p-4 mb-4 relative">
+                <i class="fa-solid fa-quote-left text-gold/20 text-3xl absolute top-2 left-2"></i>
+                <p id="modalWishText" class="text-sm text-gray-200 font-sarabun relative z-10 italic py-2">คำอธิษฐานจะปรากฏตรงนี้...</p>
+                <i class="fa-solid fa-quote-right text-gold/20 text-3xl absolute bottom-2 right-2"></i>
+            </div>
+
+            <div class="flex justify-center items-center space-x-4">
+                <button id="likeBtn" onclick="likeCurrentWish()" class="flex items-center space-x-2 bg-pink-600/30 hover:bg-pink-600/50 border border-pink-500/50 text-pink-300 px-4 py-2 rounded-full text-sm transition-all active:scale-95">
+                    <i class="fa-solid fa-heart"></i>
+                    <span id="likeCount">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Krathong Live Wall -->
+    <div id="wallModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-night-100 border border-gold/40 rounded-2xl w-full max-w-3xl h-[80vh] p-6 shadow-2xl flex flex-col relative">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
+                <div>
+                    <h3 class="text-xl font-bold text-gold">กระดานกระทงของเพื่อนร่วมงาน</h3>
+                    <p class="text-xs text-gray-400 font-sarabun">คำอธิษฐานทั้งหมดจากพนักงานในองค์กร</p>
+                </div>
+                <button onclick="toggleWallModal()" class="text-gray-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-full bg-white/5">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Grid -->
+            <div id="wallGrid" class="flex-grow overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3 pr-2 font-sarabun">
+                <!-- Dynamic Content Here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 bg-gold text-night-300 font-semibold px-4 py-2.5 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2 pointer-events-none">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toastMsg">บันทึกข้อมูลเรียบร้อย</span>
+    </div>
+
+    <script>
+        // --- Data & State Management ---
+        const KRATHONG_TYPES = {
+            classic: { 
+                name: 'กระทงใบตองคลาสสิก', 
+                icon: '🍃', 
+                color: '#2e7d32',
+                desc: 'กระทงใบตองตานีพับประณีต ตกแต่งด้วยดอกดาวเรืองสดใส พร้อมธูปเทียนทองส่องสว่างเรืองรอง',
+                gradient: 'from-emerald-700 to-green-900'
+            },
+            flower: { 
+                name: 'กระทงดอกไม้สดวิจิตร', 
+                icon: '🌸', 
+                color: '#e91e63',
+                desc: 'ประดับประดาด้วยดอกกล้วยไม้สีหวาน ดอกบัว และดอกดาวเรือง งดงามอ่อนหวานสไตล์ไทยประยุกต์',
+                gradient: 'from-pink-700 to-rose-950'
+            },
+            eco: { 
+                name: 'กระทงขนมปังรักษ์โลก', 
+                icon: '🍞', 
+                color: '#d84315',
+                desc: 'กระทงขนมปังหลากสีสัน ทำจากวัตถุดิบธรรมชาติ เป็นมิตรต่อสิ่งแวดล้อมและเป็นอาหารปลา',
+                gradient: 'from-amber-700 to-orange-950'
+            },
+            gold: { 
+                name: 'กระทง LiveLab ทองคำแฟนซี', 
+                icon: '✨', 
+                color: '#fbc02d',
+                desc: 'กระทงสีทองคำเจิดจรัส ประดับด้วยละอองไฟระยิบระยับ สัญลักษณ์แห่งความสำเร็จ ยอดขายปังทะลุจอ!',
+                gradient: 'from-yellow-600 to-amber-950'
+            }
+        };
+
+        const RANDOM_WISHES = [
+            "ขอให้ยอดขาย LiveLab พุ่งกระฉูด ยอดวิวปังๆ ทุกไลฟ์!",
+            "ขอให้การทำงานราบรื่น ระบบไม่ร่วง ไม่ติดขัด ทีมงานมีสุขกายสุขใจ",
+            "ขอให้โบนัสปังๆ KPI ทะลุเป้า เงินเดือนขึ้นไวๆ ทุกคนใน LiveLab!",
+            "ขอให้ LiveLab เติบโตอย่างมั่นคง ยิ่งใหญ่ ปังที่สุดในอุตสาหกรรม!",
+            "ขอให้เพื่อนร่วมทีม LiveLab มีสุขภาพแข็งแรง ไม่ปวดหลัง ปวดไหล่",
+            "ขอให้ดีลกับลูกค้าผ่านฉลุย KOL รีวิวดี คอนเทนต์ติดเทรนด์ตลอดปี!"
+        ];
+
+        // Sample initial krathongs data updated for LiveLab
+        let krathongs = [
+            { id: 1, name: 'พี่บอย', dept: 'Director', type: 'gold', wish: 'ขอให้ทีม LiveLab ทุกคนเติบโตไปด้วยกัน ยอดขายปังทะลุเป้าปีนี้ครับ!', likes: 24, x: 0, y: 0, speed: 0.4, scale: 1 },
+            { id: 2, name: 'น้องเจน (MC)', dept: 'MC', type: 'flower', wish: 'ขอให้ขึ้นไลฟ์สดราบรื่น ปิดการขายรัวๆ ไม่เจ็บคอจ้า!', likes: 18, x: 0, y: 0, speed: 0.3, scale: 0.9 },
+            { id: 3, name: 'ต้อม Live', dept: 'Support live', type: 'classic', wish: 'ขอให้ระบบไฟ เครื่องเสียง และสัญญาณอินเทอร์เน็ตเสถียร 100%!', likes: 15, x: 0, y: 0, speed: 0.5, scale: 0.85 },
+            { id: 4, name: 'กราฟิกสุดเทพ', dept: 'Graphic Designer', type: 'eco', wish: 'ขอให้แก้แบบไม่เกิน 2 รอบ และภาพสวยโดนใจลูกค้าตั้งแต่ครั้งแรก!', likes: 12, x: 0, y: 0, speed: 0.35, scale: 0.95 }
+        ];
+
+        let currentActiveWishId = null;
+
+        // Custom Dept Handler
+        function handleDeptChange(selectElem) {
+            const wrapper = document.getElementById('customDeptWrapper');
+            const customInput = document.getElementById('customDeptInput');
+            if (selectElem.value === 'Other') {
+                wrapper.classList.remove('hidden');
+                customInput.setAttribute('required', 'true');
+            } else {
+                wrapper.classList.add('hidden');
+                customInput.removeAttribute('required');
+            }
+        }
+
+        // Live Krathong Visual Preview inside Modal Form
+        function updateKrathongPreview() {
+            const selectedType = document.querySelector('input[name="krathongType"]:checked')?.value || 'classic';
+            const info = KRATHONG_TYPES[selectedType];
+            
+            const badge = document.getElementById('previewBadge');
+            const emoji = document.getElementById('previewEmoji');
+            const title = document.getElementById('previewTitle');
+            const desc = document.getElementById('previewDesc');
+
+            badge.className = `w-20 h-20 rounded-2xl bg-gradient-to-br ${info.gradient} border-2 border-gold/60 flex flex-col items-center justify-center shadow-lg relative shrink-0 transition-all duration-300`;
+            emoji.innerText = info.icon;
+            title.innerText = info.name;
+            desc.innerText = info.desc;
+        }
+
+        // --- Canvas River Animation System ---
+        const canvas = document.getElementById('riverCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initStarfield();
+        });
+
+        let stars = [];
+        function initStarfield() {
+            stars = [];
+            for (let i = 0; i < 150; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * (height * 0.45),
+                    radius: Math.random() * 1.5,
+                    alpha: Math.random(),
+                    speed: 0.005 + Math.random() * 0.015
+                });
+            }
+        }
+        initStarfield();
+
+        function initKrathongPositions() {
+            const riverTop = height * 0.52;
+            const riverBottom = height - 60;
+
+            krathongs.forEach((k) => {
+                if (k.x === 0 && k.y === 0) {
+                    k.x = Math.random() * width;
+                    k.y = riverTop + Math.random() * (riverBottom - riverTop);
+                    k.speed = 0.3 + Math.random() * 0.4;
+                    k.scale = 0.75 + (k.y - riverTop) / (riverBottom - riverTop) * 0.45;
+                    k.waveOffset = Math.random() * Math.PI * 2;
+                }
+            });
+        }
+
+        // Draw Rich Graphic Krathong on Canvas
+        function drawRichKrathongOnCanvas(ctx, k, waveY) {
+            ctx.save();
+            ctx.translate(k.x, waveY);
+            ctx.scale(k.scale, k.scale);
+
+            const typeInfo = KRATHONG_TYPES[k.type] || KRATHONG_TYPES.classic;
+
+            // 1. Water Ripple under Krathong
+            ctx.beginPath();
+            ctx.ellipse(0, 12, 38, 12, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(212, 175, 55, 0.15)';
+            ctx.fill();
+
+            // 2. Base Banana Leaf / Krathong Body
+            ctx.beginPath();
+            ctx.ellipse(0, 5, 32, 14, 0, 0, Math.PI * 2);
+            if (k.type === 'gold') ctx.fillStyle = '#b8860b';
+            else if (k.type === 'flower') ctx.fillStyle = '#880e4f';
+            else if (k.type === 'eco') ctx.fillStyle = '#bf360c';
+            else ctx.fillStyle = '#1b5e20';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Petals / Leaves Rim
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+                const px = Math.cos(angle) * 28;
+                const py = Math.sin(angle) * 10 + 2;
+                ctx.beginPath();
+                ctx.arc(px, py, 6, 0, Math.PI * 2);
+                ctx.fillStyle = typeInfo.color;
+                ctx.fill();
+            }
+
+            // Center Flower Decoration (Emoji Overlay)
+            ctx.font = '26px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(typeInfo.icon, 0, -6);
+
+            // 3. Incense Sticks (3 Sticks)
+            ctx.strokeStyle = '#d7ccc8';
+            ctx.lineWidth = 1;
+            [-4, 0, 4].forEach(offset => {
+                ctx.beginPath();
+                ctx.moveTo(offset, -10);
+                ctx.lineTo(offset * 1.2, -28);
+                ctx.stroke();
+                // Glowing tip
+                ctx.fillStyle = '#ff3d00';
+                ctx.beginPath();
+                ctx.arc(offset * 1.2, -28, 1, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 4. Candle & Candle Flame Glow
+            ctx.fillStyle = '#fff8e1';
+            ctx.fillRect(-2.5, -24, 5, 14);
+
+            // Candle Flame
+            const flameY = -28 + Math.sin(Date.now() * 0.01 + k.waveOffset) * 1.5;
+            const flameGlow = ctx.createRadialGradient(0, flameY, 1, 0, flameY, 22);
+            flameGlow.addColorStop(0, 'rgba(255, 255, 200, 1)');
+            flameGlow.addColorStop(0.3, 'rgba(255, 140, 0, 0.8)');
+            flameGlow.addColorStop(0.7, 'rgba(255, 50, 0, 0.2)');
+            flameGlow.addColorStop(1, 'rgba(0,0,0,0)');
+            
+            ctx.fillStyle = flameGlow;
+            ctx.beginPath();
+            ctx.arc(0, flameY, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner Candle Core Flame
+            ctx.beginPath();
+            ctx.ellipse(0, flameY, 2.5, 5, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            // 5. Name Tag Box
+            ctx.font = '500 11px Prompt, sans-serif';
+            const nameText = `${k.name} (${k.dept})`;
+            const textWidth = ctx.measureText(nameText).width;
+            
+            ctx.fillStyle = 'rgba(7, 9, 19, 0.85)';
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.6)';
+            ctx.lineWidth = 1;
+            ctx.roundRect(-textWidth / 2 - 8, 18, textWidth + 16, 20, 10);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#f3e5ab';
+            ctx.fillText(nameText, 0, 28);
+
+            ctx.restore();
+        }
+
+        // Main Render Loop
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Sky Gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.55);
+            skyGrad.addColorStop(0, '#050714');
+            skyGrad.addColorStop(0.7, '#0f142d');
+            skyGrad.addColorStop(1, '#1a2247');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height * 0.55);
+
+            // 2. Stars
+            stars.forEach(s => {
+                s.alpha += s.speed;
+                if (s.alpha > 1 || s.alpha < 0) s.speed = -s.speed;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 230, ${Math.abs(s.alpha)})`;
+                ctx.fill();
+            });
+
+            // 3. Moon & Glow
+            const moonX = width * 0.82;
+            const moonY = height * 0.18;
+            const moonRadius = Math.min(width, height) * 0.08;
+
+            const moonGlow = ctx.createRadialGradient(moonX, moonY, moonRadius * 0.8, moonX, moonY, moonRadius * 3.5);
+            moonGlow.addColorStop(0, 'rgba(255, 245, 200, 0.8)');
+            moonGlow.addColorStop(0.3, 'rgba(212, 175, 55, 0.25)');
+            moonGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = moonGlow;
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, moonRadius * 3.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#fffdf0';
+            ctx.shadowColor = '#fef0b3';
+            ctx.shadowBlur = 20;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // 4. Water Body
+            const riverTop = height * 0.50;
+            const waterGrad = ctx.createLinearGradient(0, riverTop, 0, height);
+            waterGrad.addColorStop(0, '#101a35');
+            waterGrad.addColorStop(0.5, '#0a1024');
+            waterGrad.addColorStop(1, '#04060d');
+            ctx.fillStyle = waterGrad;
+            ctx.fillRect(0, riverTop, width, height - riverTop);
+
+            // Water Waves
+            const time = Date.now() * 0.002;
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.08)';
+            ctx.lineWidth = 1.5;
+            for (let i = riverTop + 10; i < height; i += 25) {
+                ctx.beginPath();
+                for (let x = 0; x < width; x += 30) {
+                    const yOffset = Math.sin(x * 0.01 + time + i) * 3;
+                    if (x === 0) ctx.moveTo(x, i + yOffset);
+                    else ctx.lineTo(x, i + yOffset);
+                }
+                ctx.stroke();
+            }
+
+            // 5. Draw Krathongs
+            krathongs.forEach((k) => {
+                k.x -= k.speed;
+                if (k.x < -80) k.x = width + 80;
+
+                const waveY = k.y + Math.sin(time * 2 + k.waveOffset) * 4;
+                drawRichKrathongOnCanvas(ctx, k, waveY);
+            });
+
+            requestAnimationFrame(render);
+        }
+
+        // Form Submission
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('empName').value.trim();
+            const deptSelect = document.getElementById('empDept').value;
+            let finalDept = deptSelect;
+            
+            if (deptSelect === 'Other') {
+                finalDept = document.getElementById('customDeptInput').value.trim() || 'อื่นๆ';
+            }
+
+            const wish = document.getElementById('empWish').value.trim();
+            const type = document.querySelector('input[name="krathongType"]:checked').value;
+
+            if (!name || !finalDept || !wish) return;
+
+            const riverTop = height * 0.55;
+            const riverBottom = height - 80;
+
+            const newKrathong = {
+                id: Date.now(),
+                name: name,
+                dept: finalDept,
+                type: type,
+                wish: wish,
+                likes: 0,
+                x: width + 50,
+                y: riverTop + Math.random() * (riverBottom - riverTop),
+                speed: 0.3 + Math.random() * 0.3,
+                scale: 0.85,
+                waveOffset: Math.random() * Math.PI * 2
+            };
+
+            krathongs.unshift(newKrathong);
+            updateKrathongCount();
+            closeFormModal();
+            document.getElementById('krathongForm').reset();
+            document.getElementById('customDeptWrapper').classList.add('hidden');
+
+            showToast('ปล่อยกระทงลงแม่น้ำ LiveLab เรียบร้อยแล้ว! ✨');
+        }
+
+        // Modal Helpers & Init
+        function openFormModal() {
+            updateKrathongPreview();
+            const modal = document.getElementById('formModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('opacity-100'), 10);
+        }
+
+        function closeFormModal() {
+            const modal = document.getElementById('formModal');
+            modal.classList.remove('opacity-100');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function generateRandomWish() {
+            const random = RANDOM_WISHES[Math.floor(Math.random() * RANDOM_WISHES.length)];
+            document.getElementById('empWish').value = random;
+        }
+
+        function openWishModal(id) {
+            const k = krathongs.find(item => item.id === id);
+            if (!k) return;
+
+            currentActiveWishId = id;
+            const typeInfo = KRATHONG_TYPES[k.type] || KRATHONG_TYPES.classic;
+
+            document.getElementById('modalKrathongIcon').innerText = typeInfo.icon;
+            document.getElementById('modalName').innerText = k.name;
+            document.getElementById('modalDept').innerText = `LiveLab Team • ${k.dept}`;
+            document.getElementById('modalWishText').innerText = `"${k.wish}"`;
+            document.getElementById('likeCount').innerText = k.likes;
+
+            const modal = document.getElementById('wishModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('opacity-100'), 10);
+        }
+
+        function closeWishModal() {
+            const modal = document.getElementById('wishModal');
+            modal.classList.remove('opacity-100');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function likeCurrentWish() {
+            if (!currentActiveWishId) return;
+            const k = krathongs.find(item => item.id === currentActiveWishId);
+            if (k) {
+                k.likes += 1;
+                document.getElementById('likeCount').innerText = k.likes;
+                showToast('ส่งหัวใจให้เพื่อน LiveLab เรียบร้อย! ❤️');
+            }
+        }
+
+        function toggleWallModal() {
+            const modal = document.getElementById('wallModal');
+            if (modal.classList.contains('hidden')) {
+                renderWallGrid();
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.add('opacity-100'), 10);
+            } else {
+                modal.classList.remove('opacity-100');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        }
+
+        function renderWallGrid() {
+            const grid = document.getElementById('wallGrid');
+            grid.innerHTML = '';
+
+            krathongs.forEach(k => {
+                const typeInfo = KRATHONG_TYPES[k.type] || KRATHONG_TYPES.classic;
+                const card = document.createElement('div');
+                card.className = 'bg-night-300/80 border border-gold/20 hover:border-gold/60 p-4 rounded-xl transition-all flex flex-col justify-between cursor-pointer hover:scale-[1.01]';
+                card.onclick = () => {
+                    toggleWallModal();
+                    openWishModal(k.id);
+                };
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center space-x-2 mb-2">
+                            <span class="text-2xl">${typeInfo.icon}</span>
+                            <div>
+                                <h4 class="text-sm font-bold text-white leading-tight">${k.name}</h4>
+                                <span class="text-[10px] text-pink-300 font-semibold bg-pink-500/10 px-2 py-0.5 rounded-full">${k.dept}</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-300 line-clamp-3 italic mb-3">"${k.wish}"</p>
+                    </div>
+                    <div class="flex justify-between items-center text-[11px] text-gray-400 border-t border-white/5 pt-2">
+                        <span class="text-gold-light">${typeInfo.name}</span>
+                        <span class="text-pink-400 font-bold"><i class="fa-solid fa-heart mr-1"></i>${k.likes}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function updateKrathongCount() {
+            document.getElementById('krathongCount').innerText = krathongs.length;
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // --- Audio Ambient Generator ---
+        let audioCtx = null;
+        let isPlayingMusic = false;
+        let musicInterval = null;
+
+        function toggleMusic() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const icon = document.getElementById('musicIcon');
+            const text = document.getElementById('musicText');
+
+            if (!isPlayingMusic) {
+                isPlayingMusic = true;
+                icon.className = 'fa-solid fa-volume-high text-gold';
+                text.innerText = 'ปิดเสียงบรรยากาศ';
+                playPentatonicMusic();
+            } else {
+                isPlayingMusic = false;
+                icon.className = 'fa-solid fa-music text-gold';
+                text.innerText = 'เปิดเพลงบรรยากาศ';
+                if (musicInterval) clearInterval(musicInterval);
+            }
+        }
+
+        function playPentatonicMusic() {
+            const notes = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+            musicInterval = setInterval(() => {
+                if (!isPlayingMusic) return;
+
+                const note = notes[Math.floor(Math.random() * notes.length)];
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(note, audioCtx.currentTime);
+
+                gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.3);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 2.6);
+            }, 800);
+        }
+
+        window.onload = function() {
+            initKrathongPositions();
+            updateKrathongCount();
+            render();
+        };
+    </script>
+</body>
+</html>
